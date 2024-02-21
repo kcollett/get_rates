@@ -24,7 +24,7 @@ class RatesType(Enum):
     REAL = "TC_"
 
 
-@dataclass(frozen=True)
+@dataclass
 class Rates:
     """Class representing a particular set of treasury yields."""
 
@@ -34,6 +34,27 @@ class Rates:
     r10y: Decimal
     r20y: Decimal
     r30y: Decimal
+
+    def __init__(self, properties: Element, rt: RatesType):
+        """
+        Given a "properties" element from the Treasury Department XML document,
+        return a corresponding Rates object.
+        """
+        self.rt = rt
+
+        for child in properties:
+            child_tag = child.tag
+
+            if child_tag.endswith("DATE"):
+                self.date = extract_stripped_text(child)
+            elif child_tag.endswith("5YEAR"):
+                self.r5y = extract_decimal(child)
+            elif child_tag.endswith("10YEAR"):
+                self.r10y = extract_decimal(child)
+            elif child_tag.endswith("20YEAR"):
+                self.r20y = extract_decimal(child)
+            elif child_tag.endswith("30YEAR"):
+                self.r30y = extract_decimal(child)
 
     def print_as_csv(self):
         """Output a rates as CSV text."""
@@ -96,34 +117,6 @@ def extract_decimal(e: Element) -> Decimal:
     return Decimal(extract_stripped_text(e))
 
 
-def extract_rates_from_properties(properties: Element, rates_type: RatesType) -> Rates:
-    """
-    Given a "properties" element from the Treasury Department XML document,
-    return a corresponding Rates object.
-    """
-    date: str = ""
-    r5y: Decimal = None
-    r10y: Decimal
-    r20y: Decimal
-    r30y: Decimal
-
-    for child in properties:
-        child_tag = child.tag
-
-        if child_tag.endswith("DATE"):
-            date = extract_stripped_text(child)
-        elif child_tag.endswith("5YEAR"):
-            r5y = extract_decimal(child)
-        elif child_tag.endswith("10YEAR"):
-            r10y = extract_decimal(child)
-        elif child_tag.endswith("20YEAR"):
-            r20y = extract_decimal(child)
-        elif child_tag.endswith("30YEAR"):
-            r30y = extract_decimal(child)
-
-    return Rates(rates_type, date, r5y, r10y, r20y, r30y)
-
-
 def get_rates(url: str, rt: RatesType) -> Rates:
     """
     Get the XML document at the specified URL, and use its
@@ -137,7 +130,7 @@ def get_rates(url: str, rt: RatesType) -> Rates:
     content = find_only_one_ending_with(last_elt, "content")
     properties = find_only_one_ending_with(content, "properties")
 
-    return extract_rates_from_properties(properties, rt)
+    return Rates(properties, rt)
 
 
 def main() -> None:

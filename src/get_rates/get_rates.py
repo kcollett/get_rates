@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
 #
 #  -*- mode: python; -*-
 #
@@ -95,21 +95,34 @@ def find_only_one_ending_with(e: Element, tag: str) -> Element:
     return child_elts[0]
 
 
-def get_last_entry(root: Element) -> Element:
+def get_last_entry(root: Element) -> Element | None:
     """
     Return the last 'entry' Element residing under specified Element.
     """
     last_entry: Element
+    found_entry = False
+
     entries = find_all_ending_with(root, "entry")
     for elt in entries:
         last_entry = elt
+        found_entry = True
 
-    return last_entry
+    if found_entry:
+        return last_entry
+    else:
+        return None
 
 
 def extract_stripped_text(e: Element) -> str:
     """Return stripped text value of specifed Element"""
-    return e.text.strip()
+    if e is None:
+        return ""
+
+    etext = e.text
+    if etext is None:
+        return ""
+
+    return etext.strip()
 
 
 def extract_decimal(e: Element) -> Decimal:
@@ -117,7 +130,7 @@ def extract_decimal(e: Element) -> Decimal:
     return Decimal(extract_stripped_text(e))
 
 
-def get_rates(url: str, rt: RatesType) -> Rates:
+def get_rates(url: str, rt: RatesType) -> Rates | None:
     """
     Get the XML document at the specified URL, and use its
     contents to build a Rates that is returned.
@@ -125,8 +138,10 @@ def get_rates(url: str, rt: RatesType) -> Rates:
     page = requests.get(url, timeout=60)
     root = ET.fromstring(page.content)
 
-    # <root>[last]/content/properties
+    # <root>/entry[last]/content/properties
     last_elt = get_last_entry(root)
+    if last_elt is None:
+        return None
     content = find_only_one_ending_with(last_elt, "content")
     properties = find_only_one_ending_with(content, "properties")
 
@@ -150,8 +165,10 @@ def main() -> None:
     real_rates = get_rates(real_url, RatesType.REAL)
 
     # …and print them out
-    nominal_rates.print_as_csv()
-    real_rates.print_as_csv()
+    if nominal_rates is not None:
+        nominal_rates.print_as_csv()
+    if real_rates is not None:
+        real_rates.print_as_csv()
 
 
 if __name__ == "__main__":

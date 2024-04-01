@@ -7,6 +7,7 @@ Script to snarf nominal and real rates from the Treasury Department site
 and output in CSV format.
 """
 import datetime
+import logging
 import xml.etree.ElementTree as ET
 from xml.etree.ElementTree import Element
 from dataclasses import dataclass
@@ -103,6 +104,7 @@ def get_last_entry(root: Element) -> Element | None:
     found_entry = False
 
     entries = find_all_ending_with(root, "entry")
+    logging.debug("number of entries=%d", len(entries))
     for elt in entries:
         last_entry = elt
         found_entry = True
@@ -135,11 +137,13 @@ def get_rates(url: str, rt: RatesType) -> Rates | None:
     Get the XML document at the specified URL, and use its
     contents to build a Rates that is returned.
     """
-    page = requests.get(url, timeout=60)
-    root = ET.fromstring(page.content)
+    response = requests.get(url, timeout=60)
+    logging.debug("status=%d", response.status_code)
+    root = ET.fromstring(response.content)
 
     # <root>/entry[last]/content/properties
     last_elt = get_last_entry(root)
+    logging.debug("last_elt=%s", str(last_elt))
     if last_elt is None:
         return None
     content = find_only_one_ending_with(last_elt, "content")
@@ -150,6 +154,11 @@ def get_rates(url: str, rt: RatesType) -> Rates | None:
 
 def main() -> None:
     """Simple main()"""
+    logging.basicConfig(
+        level=logging.DEBUG,
+        format="%(asctime)s %(levelname)s %(message)s",
+        datefmt="%Y-%m-%dT%H:%M:%S%z",
+    )
 
     # I think this should be good enough
     decimal.getcontext().prec = 6
@@ -159,6 +168,8 @@ def main() -> None:
     date_value_month = today.strftime("%Y%m")
     nominal_url = f"{BASE_NOMINAL_XML_URL}&{DATE_VALUE_MONTH_NAME}={date_value_month}"
     real_url = f"{BASE_REAL_XML_URL}&{DATE_VALUE_MONTH_NAME}={date_value_month}"
+    logging.debug("nominal_url=%s", nominal_url)
+    logging.debug("real_url=%s", real_url)
 
     # build our Rates…
     nominal_rates = get_rates(nominal_url, RatesType.NOMINAL)

@@ -155,7 +155,7 @@ def get_rates(url: str, rt: RatesType) -> Rates | None:
 def main() -> None:
     """Simple main()"""
     logging.basicConfig(
-        level=logging.DEBUG,
+        level=logging.ERROR,
         format="%(asctime)s %(levelname)s %(message)s",
         datefmt="%Y-%m-%dT%H:%M:%S%z",
     )
